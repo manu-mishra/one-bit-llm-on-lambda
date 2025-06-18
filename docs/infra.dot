@@ -1,0 +1,10 @@
+digraph INFRA {
+  node [ color = "black", fillcolor = "#E6E6E6", height =1, style = "filled,bold,rounded", fontname = "Arial" ];
+  "BitNetLambdaInferenceServer" [ label = "BitNetLambdaInferenceServer
+(AWS::ECS::TaskDefinition)", shape =rectangle, fillcolor = "#B7E0FF" ];
+  "BitNetModel" [ label = "BitNetModel
+(Custom::ModelFile)", shape =cylinder, fillcolor = "#FFF5CD" ];
+  "BitNetServerPort" [ label = "BitNetServerPort
+(AWS::EC2::SecurityGroup)" ];
+  "BitNetServerPort" -> "BitNetLambdaInferenceServer";
+}
