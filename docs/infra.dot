@@ -1,10 +1,31 @@
 digraph INFRA {
-  node [ color = "black", fillcolor = "#E6E6E6", height =1, style = "filled,bold,rounded", fontname = "Arial" ];
-  "BitNetLambdaInferenceServer" [ label = "BitNetLambdaInferenceServer
-(AWS::ECS::TaskDefinition)", shape =rectangle, fillcolor = "#B7E0FF" ];
-  "BitNetModel" [ label = "BitNetModel
-(Custom::ModelFile)", shape =cylinder, fillcolor = "#FFF5CD" ];
-  "BitNetServerPort" [ label = "BitNetServerPort
-(AWS::EC2::SecurityGroup)" ];
-  "BitNetServerPort" -> "BitNetLambdaInferenceServer";
+  rankdir=TB;
+  node [color="black", fillcolor="#E6E6E6", height=1, style="filled,bold,rounded", fontname="Arial"];
+  
+  // User/Client
+  "User" [label="User/Client\n(API Requests)", shape=ellipse, fillcolor="#FFE5B4"];
+  
+  // AWS Lambda Function
+  "BitNetLambda" [label="BitNet Lambda Function\n(AWS::Lambda::Function)\nContainer Image", shape=rectangle, fillcolor="#FF9900"];
+  
+  // ECR Repository
+  "ECRRepo" [label="ECR Repository\n(Container Registry)", shape=cylinder, fillcolor="#B7E0FF"];
+  
+  // CloudWatch Logs
+  "CloudWatchLogs" [label="CloudWatch Logs\n(AWS::Logs::LogGroup)", shape=rectangle, fillcolor="#90EE90"];
+  
+  // BitNet Model
+  "BitNetModel" [label="BitNet 1.58B Model\n(ggml-model-i2_s.gguf)\nEmbedded in Container", shape=cylinder, fillcolor="#FFF5CD"];
+  
+  // IAM Role
+  "LambdaRole" [label="Lambda Execution Role\n(AWS::IAM::Role)", shape=diamond, fillcolor="#DDA0DD"];
+  
+  // Relationships
+  "User" -> "BitNetLambda" [label="HTTP Request\n(JSON payload)"];
+  "BitNetLambda" -> "User" [label="AI Response\n(Generated text)"];
+  "ECRRepo" -> "BitNetLambda" [label="Container Image"];
+  "BitNetLambda" -> "CloudWatchLogs" [label="Function Logs"];
+  "BitNetModel" -> "BitNetLambda" [label="Model Inference"];
+  "LambdaRole" -> "BitNetLambda" [label="Execution Permissions"];
+  "LambdaRole" -> "CloudWatchLogs" [label="Log Permissions"];
 }

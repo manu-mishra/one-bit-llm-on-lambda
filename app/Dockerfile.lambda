@@ -1,0 +1,50 @@
+# Multi-stage build for BitNet Lambda - Using Debian for OpenMP compatibility
+FROM python:3.9-bullseye as builder
+
+# Install build dependencies (no OpenMP needed)
+RUN apt-get update && \
+    apt-get install -y cmake build-essential git clang && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy BitNet source code and model
+COPY temp/BitNet /app/BitNet
+RUN mkdir -p /app/BitNet/models/BitNet-b1.58-2B-4T
+COPY temp/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf /app/BitNet/models/BitNet-b1.58-2B-4T/
+
+WORKDIR /app/BitNet
+
+# Generate optimized kernels for ARM
+RUN python utils/codegen_tl1.py --model bitnet_b1_58-3B --BM 160,320,320 --BK 64,128,64 --bm 32,64,32
+
+# Build BitNet without OpenMP to avoid shared memory issues in Lambda
+RUN cmake -B build -DBITNET_ARM_TL1=ON -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DBUILD_SHARED_LIBS=OFF -DGGML_OPENMP=OFF
+RUN cmake --build build --config Release
+
+# Runtime stage - Use Debian slim (same as working local version)
+FROM python:3.9-slim
+
+# Install minimal runtime dependencies (no OpenMP needed)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Lambda Runtime Interface Client for Lambda compatibility
+RUN pip install --no-cache-dir awslambdaric requests
+
+# Copy built BitNet binary and model
+COPY --from=builder /app/BitNet/build/bin/llama-server /app/bin/
+COPY --from=builder /app/BitNet/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf /app/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf
+
+# Make binary executable
+RUN chmod +x /app/bin/llama-server
+
+# Copy Lambda handler
+COPY app/lambda_handler.py /var/task/
+
+# Set working directory to Lambda task root
+WORKDIR /var/task
+
+# Set the CMD to Lambda handler (use awslambdaric to run the handler)
+CMD ["python", "-m", "awslambdaric", "lambda_handler.lambda_handler"]

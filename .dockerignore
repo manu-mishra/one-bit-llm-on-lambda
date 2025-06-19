@@ -1,0 +1,12 @@
+cdk/
+cdk.out/
+.git/
+**/.git/
+**/cdk.out/
+**/__pycache__/
+**/.venv/
+**/node_modules/
+.DS_Store
+*.log
+.env
+.env.local
